@@ -411,8 +411,8 @@ const REGIONS = [
   {n:"الرياض",        t:"city", sky0:"#2B3F63", sky1:"#6B5A85", far:"#1E2C46", mid:"#16223A", gnd:"#111B2E", gnd2:"#0A1220", ob:"#0E1A2B", acc:"#FFD98A", sun:"#F6E3B0"},
   {n:"البحر الأحمر", t:"sea",  sky0:"#C3E8F2", sky1:"#63C0D8", far:"#2E8FA8", mid:"#1E7793", gnd:"#0F5D79", gnd2:"#093F53", ob:"#0B6B84", acc:"#EAFBFF", sun:"#FFFDF2"},
 ];
-REGIONS[0].maqam="hijaz"; REGIONS[1].maqam="rast"; REGIONS[2].maqam="nahawand";
-REGIONS[3].maqam="ajam";  REGIONS[4].maqam="kurd";
+REGIONS[0].maqam="ajam"; REGIONS[1].maqam="rast"; REGIONS[2].maqam="nahawand";
+REGIONS[3].maqam="hijaz"; REGIONS[4].maqam="kurd";
 
 const ORD = ["الأولى","الثانية","الثالثة","الرابعة","الخامسة","السادسة","السابعة","الثامنة","التاسعة","العاشرة"];
 
@@ -497,27 +497,35 @@ const MAQAM = {
 const ROOT = 146.83;
 const hz = semi => ROOT * Math.pow(2, semi/12);
 function deg(i){
-  const sc = MAQAM[regionB.maqam] || MAQAM.hijaz;
+  const sc = MAQAM[regionB.maqam] || MAQAM.ajam;
   const oct = Math.floor(i / 7), k = ((i % 7) + 7) % 7;
   return sc[k] + oct*12;
 }
 
-/* عبارات لحنية: [درجة, طول] — مجموع كل عبارة مازورة كاملة */
-const PHRASES = [
-  [[0,2],[1,2],[2,2],[3,2],[4,4],[3,2],[2,2]],
-  [[4,2],[5,2],[4,2],[3,2],[2,4],[1,2],[0,2]],
-  [[2,2],[4,2],[7,4],[6,2],[5,2],[4,4]],
-  [[0,4],[3,2],[2,2],[4,4],[2,2],[0,2]],
-  [[7,2],[6,2],[5,2],[4,2],[3,4],[4,4]],
-  [[4,4],[3,2],[4,2],[5,4],[4,4]]
+/*
+  لحن المسيرة — ثماني موازير تُعاد: استهلال صاعد من الخامسة إلى القرار،
+  ثم جملة ترتفع إلى الجواب وتقفل على القرار. الوزن منقّط (3+1) كما في
+  المسيرات لا متساوٍ — وهذا ما يعطي الإحساس المارشي أكثر من النغمات نفسها.
+  الدرجة السالبة قرار أعمق: ـ٣ هي الخامسة تحت القرار.
+*/
+const THEME = [
+  [[-3,2],[ 0,4],[ 0,2],[ 1,2],[ 2,4],[-3,2]],
+  [[ 3,3],[ 2,1],[ 1,4],[ 0,4],[-3,4]],
+  [[ 1,2],[ 2,2],[ 3,4],[ 4,4],[ 3,2],[ 2,2]],
+  [[ 2,6],[ 1,2],[ 0,8]],
+  [[ 4,3],[ 4,1],[ 5,4],[ 4,4],[ 2,4]],
+  [[ 3,3],[ 2,1],[ 1,4],[ 2,4],[ 3,4]],
+  [[ 4,4],[ 7,4],[ 6,2],[ 5,2],[ 4,4]],
+  [[ 3,4],[ 2,4],[ 1,4],[ 0,4]]
 ];
-/* إيقاع المقسوم مع دقّ العرضة */
-const P_DUM  = [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0];
-const P_TEK  = [0,0,0,1, 1,0,0,0, 0,0,1,1, 1,0,0,1];
-const P_CLAP = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0];
-const BASS   = [0, 4, 0, 3];
 
-let bpm = 96;
+/* إيقاع مسيرة: طبل كبير على القوي، ومرقّص على الثانية والرابعة */
+const P_BOOM  = [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0];
+const P_SNARE = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,1];
+const P_HAT   = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0];
+const BASS    = [0, 4, 0, 4];
+
+let bpm = 108;
 const stepDur = () => 60/bpm/4;
 
 /* ——— الأصوات ——— */
@@ -536,14 +544,31 @@ function tone(t, f, dur, type, vol, opt){
   g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + a);
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   o.connect(g); tail.connect(musicBus);
-  if (opt.vib){
-    const lfo = ac.createOscillator(), lg = ac.createGain();
-    lfo.type = "sine"; lfo.frequency.value = 5.4; lg.gain.value = opt.vib;
-    lfo.connect(lg); lg.connect(o.frequency);
-    lfo.start(t + 0.06); lfo.stop(t + dur + 0.05);
-  }
   o.start(t); o.stop(t + dur + 0.04);
 }
+
+/*
+  نحاس المسيرة: منشاران مزاحان قليلاً عبر مرشّح يفتح مع النغمة.
+  الإزاحة هي الفرق بين مولّد واحد رفيع ومجموعة نفخ تعزف معاً.
+*/
+function brass(t, f, dur, vol){
+  for (let k = 0; k < 2; k++){
+    const o = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter();
+    o.type = "sawtooth";
+    o.frequency.setValueAtTime(f * (k ? 1.006 : 1), t);
+    fl.type = "lowpass"; fl.Q.value = 1.1;
+    fl.frequency.setValueAtTime(800, t);
+    fl.frequency.linearRampToValueAtTime(3200, t + 0.10);
+    const hold = Math.max(0.05, dur*0.62);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.035);
+    g.gain.setValueAtTime(vol, t + hold);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(fl); fl.connect(musicBus);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+}
+
 function noiseHit(t, vol, freq, q, dur, type){
   const s = ac.createBufferSource(); s.buffer = noiseBuf;
   const f = ac.createBiquadFilter(); f.type = type || "bandpass"; f.frequency.value = freq; f.Q.value = q;
@@ -553,56 +578,59 @@ function noiseHit(t, vol, freq, q, dur, type){
   s.connect(f); f.connect(g); g.connect(musicBus);
   s.start(t); s.stop(t + dur + 0.02);
 }
-function dum(t, v){
+function boom(t, v){                       /* طبل المسيرة */
   const o = ac.createOscillator(), g = ac.createGain();
   o.type = "sine";
-  o.frequency.setValueAtTime(168, t);
-  o.frequency.exponentialRampToValueAtTime(48, t + 0.1);
+  o.frequency.setValueAtTime(150, t);
+  o.frequency.exponentialRampToValueAtTime(44, t + 0.13);
   g.gain.setValueAtTime(v, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
   o.connect(g); g.connect(musicBus);
-  o.start(t); o.stop(t + 0.28);
-  noiseHit(t, v*0.22, 320, 1.2, 0.05);
+  o.start(t); o.stop(t + 0.36);
+  noiseHit(t, v*0.2, 260, 1.1, 0.06);
 }
-const tek = (t,v) => noiseHit(t, v, 2700, 1.7, 0.055);
-const riq = (t,v) => noiseHit(t, v, 6800, 0.9, 0.03);
-function clap(t,v){ for (let i=0;i<3;i++) noiseHit(t + i*0.013, v*(1 - i*0.28), 1300, 1.1, 0.075); }
+const snare  = (t,v) => { noiseHit(t, v, 1900, 0.8, 0.095); noiseHit(t, v*0.5, 3400, 1.4, 0.05); };
+const hat    = (t,v) => noiseHit(t, v, 7200, 0.9, 0.028);
+const cymbal = (t,v) => noiseHit(t, v, 5600, 0.5, 0.85, "highpass");
+const dum    = boom;                       /* يُستعمل في التحولات */
 
 /* ——— الجدولة ——— */
 function schedBar(t0){
-  const sd = stepDur(), barLen = sd*16;
+  const sd = stepDur();
+  const line = THEME[bar % THEME.length];
+  const loud = !!intensity;
 
-  tone(t0, hz(deg(0) - 24), barLen*1.05, "sawtooth", 0.05, {cut:420, a:0.25});
+  if (bar % 4 === 0) cymbal(t0, loud ? 0.10 : 0.05);
 
-  const arp = [0, 2, 4, 2];
-  for (let i=0;i<4;i++){
-    const t = t0 + (i*4 + 2)*sd;
-    tone(t, hz(deg(arp[i] + 7)), sd*2.4, "triangle", intensity ? 0.055 : 0.04, {cut:2600, a:0.006});
-  }
+  /* عود خفيف على الضعيف — النكهة العربية تحت النحاس */
+  [2, 6, 10, 14].forEach(function(i, k){
+    tone(t0 + i*sd, hz(deg([0, 2, 4, 2][k] + 7)), sd*1.9, "triangle",
+         loud ? 0.04 : 0.032, {cut:2400, a:0.005});
+  });
 
-  const rest = (bar % 8 === 7) || (!intensity && bar % 2 === 1);
-  if (!rest){
-    const ph = PHRASES[(bar*2 + level) % PHRASES.length];
-    let at = 0;
-    ph.forEach(function(nt){
-      const t = t0 + at*sd, d = nt[1]*sd*0.92;
-      if (Math.random() < 0.22)
-        tone(t - sd*0.28, hz(deg(nt[0] + 8)), sd*0.3, "sawtooth", 0.03, {cut:2000, a:0.005});
-      tone(t, hz(deg(nt[0] + 7)), d, "sawtooth", intensity ? 0.075 : 0.045,
-           {cut:2200, q:1.1, a:0.02, vib: intensity ? 4 : 2});
-      at += nt[1];
-    });
-  }
+  /* اللحن وثالثته الموازية — موازاة داخل المقام لا بفاصل ثابت */
+  let at = 0;
+  line.forEach(function(nt){
+    const t = t0 + at*sd, d = nt[1]*sd*0.94;
+    brass(t, hz(deg(nt[0] + 7)), d, loud ? 0.085 : 0.05);
+    brass(t, hz(deg(nt[0] + 5)), d, loud ? 0.042 : 0.024);
+    at += nt[1];
+  });
 }
 
 function schedStep(i, t){
   if (i === 0) schedBar(t);
+  const sd = stepDur();
+
+  /* الباص يمشي قراراً وخامسة — مشية المسيرة */
+  if (i % 4 === 0)
+    tone(t, hz(deg(BASS[i/4]) - 12), sd*2.6, "sawtooth", intensity ? 0.10 : 0.06,
+         {cut:360, a:0.015});
+
   if (!intensity) return;
-  if (P_DUM[i])  dum(t, 0.48);
-  if (P_TEK[i])  tek(t, 0.15);
-  if (P_CLAP[i]) clap(t, 0.11);
-  if (i % 2 === 1) riq(t, 0.045);
-  if (i % 4 === 0) tone(t, hz(deg(BASS[i/4]) - 12), stepDur()*3.4, "sawtooth", 0.085, {cut:340, a:0.02});
+  if (P_BOOM[i])  boom(t, 0.5);
+  if (P_SNARE[i]) snare(t, i >= 14 ? 0.09 : 0.14);
+  if (P_HAT[i])   hat(t, 0.05);
 }
 
 function scheduler(){
@@ -622,7 +650,7 @@ const music = {
     seqTimer = setInterval(scheduler, 25);
   },
   set(i){ intensity = i; },
-  tempo(){ bpm = 96 + Math.min(34, (level-1)*5); },
+  tempo(){ bpm = 108 + Math.min(26, (level-1)*4); },
   gain(){
     if (!musicBus) return;
     const g = (muted || !musicOn) ? 0 : (ducked ? MUSIC_VOL*0.3 : MUSIC_VOL);
@@ -633,8 +661,20 @@ const music = {
   fill(){
     if (!ac || !musicOn || muted) return;
     const t = ac.currentTime;
-    noiseHit(t, 0.16, 5200, 0.6, 0.9, "highpass");
-    dum(t, 0.5);
+    cymbal(t, 0.16); boom(t, 0.5);
+  },
+  /* نفير افتتاح: ثلاثي صاعد ثم جواب ممدود على طبلتين */
+  fanfare(){
+    if (!ac || !musicOn || muted) return;
+    const t = ac.currentTime + 0.05, u = 0.13;
+    [0, 2, 4].forEach(function(d, i){
+      brass(t + i*u, hz(deg(d + 7)), u*1.15, 0.10);
+      brass(t + i*u, hz(deg(d + 5)), u*1.15, 0.05);
+    });
+    brass(t + 3*u, hz(deg(7 + 7)), 0.62, 0.11);
+    brass(t + 3*u, hz(deg(4 + 7)), 0.62, 0.055);
+    boom(t, 0.5); boom(t + 3*u, 0.5);
+    cymbal(t + 3*u, 0.14);
   }
 };
 
@@ -1078,7 +1118,7 @@ function levelUp(){
   document.getElementById("bsm").textContent = "المنطقة " + (ORD[(level-1) % ORD.length] || "التالية");
   document.getElementById("blg").textContent = regionB.n;
   b.classList.remove("show"); void b.offsetWidth; b.classList.add("show");
-  music.tempo(); music.fill();
+  music.tempo(); music.fanfare();
   sLevel(); paint();
 }
 
@@ -1296,7 +1336,7 @@ function start(){
   state = "play";
   ov.hidden = true;
   ov.innerHTML = "";
-  music.tempo(); music.begin(); music.set(1); music.duck(false);
+  music.tempo(); music.begin(); music.set(1); music.duck(false); music.fanfare();
   showTouchHint();
   sLevel();
 }
