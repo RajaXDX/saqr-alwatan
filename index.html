@@ -1,0 +1,1457 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>صقر الوطن</title>
+<meta name="description" content="لعبة اليوم الوطني السعودي: طِر بالصقر عبر خمس مناطق من المملكة، واجمع التمر والبيارق. تشتغل من المتصفح بلا تحميل.">
+<meta name="theme-color" content="#0B1512">
+<meta property="og:type" content="website">
+<meta property="og:title" content="صقر الوطن — لعبة اليوم الوطني">
+<meta property="og:description" content="طِر بالصقر عبر خمس مناطق من المملكة في يوم الوطن.">
+<meta property="og:url" content="https://rajaxdx.github.io/saqr-alwatan/">
+<meta property="og:image" content="https://rajaxdx.github.io/saqr-alwatan/assets/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/favicon.png">
+<link rel="apple-touch-icon" href="assets/logo.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Reem+Kufi:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap">
+
+<style>
+/* لعبة آركيد بهوية بصرية واحدة ملتزمة: ليل نجدي أخضر. لا تبديل سمات. */
+:root{
+  --night:#0B1512;
+  --night-2:#0F1F19;
+  --panel:#132520;
+  --line:#20382F;
+  --flag:#006C35;
+  --flag-lit:#2FBF71;
+  --gold:#D9A441;
+  --sand:#EBDCC0;
+  --muted:#8FA79A;
+  --danger:#E0654F;
+  --shadow:0 18px 40px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+html{color-scheme:dark}
+html,body{overscroll-behavior:none}
+body{
+  margin:0;
+  /* اللمس للعب لا للتمرير: لا تكبير بنقرتين، ولا تحديد نص، ولا وميض أزرق */
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  -webkit-user-select:none;user-select:none;
+  -webkit-touch-callout:none;
+  background:
+    radial-gradient(1100px 620px at 50% -10%, #16302607, transparent 70%),
+    radial-gradient(800px 500px at 50% 120%, #00693312, transparent 70%),
+    var(--night);
+  color:var(--sand);
+  font-family:"IBM Plex Sans Arabic", system-ui, "Segoe UI", sans-serif;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:22px 16px 34px;
+}
+.wrap{width:min(1020px,100%);display:flex;flex-direction:column;gap:0}
+
+/* ——— الترويسة ——— */
+.topbar{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:0 4px 12px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{width:38px;height:38px;flex:none}
+h1{
+  font-family:"Reem Kufi", "IBM Plex Sans Arabic", sans-serif;
+  font-weight:700;font-size:clamp(26px,4.4vw,38px);
+  margin:0;line-height:1;letter-spacing:.5px;
+  color:var(--sand);
+  text-wrap:balance;
+}
+.kicker{
+  font-size:12.5px;letter-spacing:.14em;color:var(--muted);
+  display:flex;align-items:center;gap:9px;padding-bottom:5px;
+}
+.kicker b{color:var(--flag-lit);font-weight:600;letter-spacing:.06em}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--gold);display:inline-block}
+
+/* ——— الشريط النجدي (مثلثات عمارة نجد) ——— */
+.najdi{
+  height:15px;
+  background-color:var(--night-2);
+  background-image:
+    linear-gradient(45deg,var(--flag) 25%,transparent 25.5%),
+    linear-gradient(-45deg,var(--flag) 25%,transparent 25.5%);
+  background-size:24px 15px;
+  background-position:0 0;
+  border-radius:3px;
+}
+.najdi.flip{transform:scaleY(-1)}
+
+/* ——— المسرح ——— */
+.stage{
+  position:relative;
+  margin:8px 0;
+  border-radius:6px;
+  overflow:hidden;
+  background:#0d1b16;
+  box-shadow:var(--shadow), 0 0 0 1px var(--line);
+  aspect-ratio:16/9;
+}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.stage{touch-action:none}
+
+/* ——— شريط الحالة ——— */
+.hud{
+  position:absolute;inset:12px 14px auto 14px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+  pointer-events:none;font-size:13px;
+}
+.pod{
+  background:rgba(8,20,16,.62);
+  backdrop-filter:blur(3px);
+  border:1px solid rgba(47,191,113,.22);
+  border-radius:4px;
+  padding:6px 11px;
+  display:flex;align-items:center;gap:10px;
+  font-variant-numeric:tabular-nums;
+}
+.pod .lbl{color:var(--muted);font-size:11px;letter-spacing:.08em}
+.pod .val{font-weight:600;font-size:16px;color:var(--sand)}
+.pod .val.gold{color:var(--gold)}
+.region{font-family:"Reem Kufi",sans-serif;color:var(--flag-lit);font-size:15px;font-weight:600}
+.lives{display:flex;gap:5px;align-items:center}
+.lives svg{width:17px;height:17px}
+.lives .off{opacity:.2}
+.hud .right{display:flex;gap:8px;align-items:flex-start}
+#mute,#bgm{
+  pointer-events:auto;cursor:pointer;background:rgba(8,20,16,.62);
+  border:1px solid rgba(47,191,113,.22);border-radius:4px;color:var(--muted);
+  width:34px;height:33px;display:grid;place-items:center;padding:0;
+  font-family:inherit;
+}
+#mute:hover,#bgm:hover{color:var(--sand);border-color:rgba(47,191,113,.5)}
+#mute svg,#bgm svg{width:17px;height:17px}
+
+/* ——— الطبقات العلوية ——— */
+.overlay{
+  position:absolute;inset:0;display:grid;place-items:center;
+  background:linear-gradient(180deg,rgba(6,15,12,.78),rgba(6,15,12,.9));
+  backdrop-filter:blur(2px);
+  padding:18px;text-align:center;
+  overflow:auto;overscroll-behavior:contain;
+}
+.overlay[hidden]{display:none}
+.card{max-width:520px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.card h2{
+  font-family:"Reem Kufi",sans-serif;font-weight:700;
+  font-size:clamp(30px,5.6vw,46px);margin:0;line-height:1.12;color:var(--sand);
+  text-wrap:balance;
+}
+.card h2 em{font-style:normal;color:var(--flag-lit)}
+.card p{margin:0;color:var(--muted);line-height:1.75;font-size:14.5px;max-width:44ch}
+.rules{
+  display:flex;flex-wrap:wrap;gap:8px 10px;justify-content:center;
+  font-size:12.5px;color:var(--sand);
+}
+.rule{
+  display:flex;align-items:center;gap:7px;
+  border:1px solid var(--line);border-radius:3px;padding:5px 10px;background:rgba(19,37,32,.7);
+}
+.chip{width:13px;height:13px;border-radius:2px;flex:none}
+.chip.b{background:var(--flag);box-shadow:inset 0 0 0 1px #2fbf7166}
+.chip.d{background:var(--gold);border-radius:50%}
+.chip.s{background:#57d6a0}
+.chip.x{background:#8A5A2F}
+button.play{
+  font-family:"Reem Kufi",sans-serif;font-size:19px;font-weight:600;
+  background:var(--flag);color:#F2FFF8;border:0;border-radius:4px;
+  padding:13px 34px;cursor:pointer;letter-spacing:.5px;
+  box-shadow:0 8px 20px rgba(0,108,53,.4);
+  transition:transform .12s ease, background .12s ease;
+}
+button.play:hover{background:#008542;transform:translateY(-1px)}
+button.play:active{transform:translateY(1px)}
+button.play:focus-visible,#mute:focus-visible,#bgm:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.keys{font-size:12px;color:var(--muted);letter-spacing:.03em}
+kbd{
+  font-family:inherit;background:var(--panel);border:1px solid var(--line);
+  border-bottom-width:2px;border-radius:3px;padding:1px 7px;font-size:11.5px;color:var(--sand);
+}
+.tally{display:flex;gap:26px;justify-content:center;font-variant-numeric:tabular-nums}
+.tally div{display:flex;flex-direction:column;gap:3px}
+.tally .n{font-family:"Reem Kufi",sans-serif;font-size:32px;font-weight:700;color:var(--sand);line-height:1}
+.tally .n.gold{color:var(--gold)}
+.tally .k{font-size:11px;letter-spacing:.1em;color:var(--muted)}
+.newbest{
+  font-size:12px;letter-spacing:.14em;color:var(--gold);
+  border:1px dashed rgba(217,164,65,.5);border-radius:3px;padding:4px 12px;
+}
+
+/* ——— لافتة المنطقة ——— */
+.banner{
+  position:absolute;top:50%;right:0;left:0;transform:translateY(-50%);
+  display:grid;place-items:center;pointer-events:none;opacity:0;
+}
+.banner .inner{
+  background:rgba(6,15,12,.72);border-top:2px solid var(--flag-lit);border-bottom:2px solid var(--flag-lit);
+  padding:14px 42px;text-align:center;
+}
+.banner .sm{font-size:11px;letter-spacing:.28em;color:var(--gold);margin-bottom:5px}
+.banner .lg{font-family:"Reem Kufi",sans-serif;font-size:34px;font-weight:700;color:var(--sand);line-height:1}
+.banner.show{animation:sweep 2s ease forwards}
+@keyframes sweep{
+  0%{opacity:0;transform:translateY(-50%) scale(.94)}
+  14%{opacity:1;transform:translateY(-50%) scale(1)}
+  76%{opacity:1}
+  100%{opacity:0;transform:translateY(-50%) scale(1.02)}
+}
+
+/* ——— تلميح اللمس ——— */
+.touchhint{
+  position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+  background:rgba(8,20,16,.72);border:1px solid rgba(47,191,113,.3);border-radius:20px;
+  padding:7px 16px;font-size:12.5px;color:var(--sand);white-space:nowrap;
+  pointer-events:none;opacity:0;transition:opacity .4s ease;
+}
+.touchhint.on{opacity:1}
+
+/* ——— أدِر جوالك ——— */
+.rotate{
+  position:fixed;inset:0;z-index:50;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  background:var(--night);padding:28px;text-align:center;
+}
+.rotate svg{width:74px;height:74px;color:var(--flag-lit)}
+.rotate .msg{
+  font-family:"Reem Kufi",sans-serif;font-size:22px;color:var(--sand);
+  line-height:1.5;max-width:20ch;
+}
+.rotate .sub{font-size:13px;color:var(--muted);max-width:30ch;line-height:1.7}
+.rotate button{
+  font-family:inherit;font-size:13.5px;color:var(--muted);
+  background:none;border:1px solid var(--line);border-radius:4px;
+  padding:9px 20px;cursor:pointer;
+}
+.rotate button:hover{color:var(--sand);border-color:var(--flag-lit)}
+@keyframes tilt{0%,55%{transform:rotate(0)}75%,100%{transform:rotate(-90deg)}}
+.rotate .icon{animation:tilt 2.6s ease-in-out infinite}
+
+/* ——— التذييل ——— */
+.controls{
+  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+  padding:12px 4px 0;font-size:12.5px;color:var(--muted);
+}
+.controls .set{display:flex;gap:16px;flex-wrap:wrap}
+.controls .set span{display:flex;align-items:center;gap:7px}
+.sig{font-family:"Reem Kufi",sans-serif;color:var(--flag-lit);letter-spacing:.04em}
+
+@media (max-width:620px){
+  body{padding:12px 10px 20px}
+  .pod{padding:5px 8px;gap:7px}
+  .pod .val{font-size:14px}
+  .hud{inset:9px 10px auto 10px}
+  .controls{font-size:11.5px;gap:8px}
+  .controls .set{gap:10px}
+}
+/* المسرح يقصر مع ضيق الشاشة، فتتقلص البطاقة معه */
+@media (max-width:760px){
+  .overlay{padding:10px}
+  .card{gap:8px}
+  .card h2{font-size:clamp(19px,4.6vw,30px);line-height:1.2}
+  .card p{font-size:11.5px;line-height:1.55;max-width:38ch}
+  .rules{gap:5px 6px;font-size:10.5px}
+  .rule{padding:3px 7px;gap:5px}
+  .chip{width:10px;height:10px}
+  button.play{font-size:15px;padding:9px 22px}
+  .keys{display:none}
+  .tally{gap:18px}
+  .tally .n{font-size:24px}
+  .banner .lg{font-size:24px}
+  .banner .inner{padding:10px 26px}
+}
+@media (max-width:480px){
+  .card p{display:none}
+  .rules .rule:nth-child(n+4){display:none}
+}
+/* أصابع لا فأرة: أزرار أوسع للمس */
+@media (pointer:coarse){
+  #mute,#bgm,#fs{width:40px;height:38px}
+  #mute svg,#bgm svg,#fs svg{width:19px;height:19px}
+  button.play{padding:15px 38px}
+  .hud .right{gap:6px}
+}
+
+/* الجوال أفقياً: الملعب يملأ الشاشة من حافة إلى حافة */
+@media (orientation:landscape) and (max-height:560px){
+  body{padding:0;align-items:stretch}
+  .topbar,.najdi,.controls{display:none}
+  .wrap{width:100%;height:100dvh;display:grid;place-items:center}
+  .stage{
+    margin:0;border-radius:0;
+    width:min(100vw, calc(100dvh * 16 / 9));
+    box-shadow:none;
+  }
+  .hud{
+    inset:max(8px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right))
+          auto max(10px,env(safe-area-inset-left));
+  }
+}
+
+@media (prefers-reduced-motion:reduce){
+  .banner.show{animation-duration:.01ms}
+  button.play{transition:none}
+  .rotate .icon{animation:none}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap" dir="rtl">
+
+  <header class="topbar">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <g fill="none" stroke="#2FBF71" stroke-width="3.2" stroke-linecap="round">
+          <path d="M8 42 C20 50 44 50 56 42"/>
+          <path d="M8 42 L14 47"/><path d="M56 42 L50 47"/>
+          <path d="M10 49 C22 57 42 57 54 49"/>
+          <path d="M10 49 L16 53"/><path d="M54 49 L48 53"/>
+        </g>
+        <g stroke="#D9A441" stroke-width="3" stroke-linecap="round" fill="none">
+          <path d="M32 38 V16"/>
+          <path d="M32 20 C24 16 20 10 20 6 c6 1 10 5 12 9"/>
+          <path d="M32 20 C40 16 44 10 44 6 c-6 1-10 5-12 9"/>
+          <path d="M32 27 C23 24 17 19 15 14 c7 1 13 5 17 10"/>
+          <path d="M32 27 C41 24 47 19 49 14 c-7 1-13 5-17 10"/>
+        </g>
+      </svg>
+      <h1>صقر الوطن</h1>
+    </div>
+    <div class="kicker">اليوم الوطني السعودي <span class="dot"></span> <b>٢٣ سبتمبر</b> <span class="dot"></span> خمس مناطق</div>
+  </header>
+
+  <div class="najdi"></div>
+
+  <div class="stage" id="stage">
+    <canvas id="game" width="960" height="540" aria-label="لعبة صقر الوطن"></canvas>
+
+    <div class="hud">
+      <div class="pod">
+        <span class="lbl">النقاط</span><span class="val" id="score">٠</span>
+        <span class="lbl" style="margin-inline-start:6px">الأفضل</span><span class="val gold" id="best">٠</span>
+      </div>
+      <div class="right">
+        <div class="pod"><span class="region" id="region">النَّفُود</span></div>
+        <div class="pod lives" id="lives"></div>
+        <button id="mute" title="كتم الصوت" aria-label="كتم الصوت"></button>
+        <button id="bgm" title="الموسيقى" aria-label="الموسيقى"></button>
+        <button id="fs" title="ملء الشاشة" aria-label="ملء الشاشة" hidden></button>
+      </div>
+    </div>
+
+    <div class="banner" id="banner"><div class="inner"><div class="sm" id="bsm">المنطقة الثانية</div><div class="lg" id="blg">العُلا</div></div></div>
+
+    <div class="touchhint" id="touchhint">المس واستمرّ للارتفاع — ارفع إصبعك لتنزلق</div>
+
+    <div class="overlay" id="overlay"></div>
+  </div>
+
+  <div class="najdi flip"></div>
+
+  <div class="rotate" id="rotate" hidden>
+  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>
+  </svg>
+  <p class="msg">أدِر جوالك أفقياً</p>
+  <p class="sub">الصقر يحتاج سماءً أوسع — والمناطق تظهر على اتساعها.</p>
+  <button type="button" id="anyway">العب عمودياً على أي حال</button>
+</div>
+
+<footer class="controls">
+    <div class="set">
+      <span><kbd>مسافة</kbd> ارتفاع</span>
+      <span><kbd>P</kbd> إيقاف مؤقت</span>
+      <span><kbd>M</kbd> الصوت</span>
+      <span><kbd>N</kbd> الموسيقى</span>
+      <span>أو المس الشاشة</span>
+    </div>
+    <div class="sig">حياكم الله في يومنا الوطني</div>
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ═══════════ أدوات ═══════════ */
+const AR = "٠١٢٣٤٥٦٧٨٩";
+const ar = n => String(Math.max(0,Math.floor(n))).replace(/\d/g, d => AR[+d]);
+const clamp = (v,a,b) => v<a?a:v>b?b:v;
+const rnd = (a,b) => a + Math.random()*(b-a);
+const pseudo = (i,s) => { const x = Math.sin(i*127.1 + s*311.7)*43758.5453; return x - Math.floor(x); };
+
+function hex(c){ return [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)]; }
+function mixc(a,b,t){
+  const A=hex(a), B=hex(b);
+  return "rgb("+Math.round(A[0]+(B[0]-A[0])*t)+","+Math.round(A[1]+(B[1]-A[1])*t)+","+Math.round(A[2]+(B[2]-A[2])*t)+")";
+}
+
+/* ═══════════ المناطق ═══════════ */
+const REGIONS = [
+  {n:"النَّفُود",      t:"dune", sky0:"#FBDCA6", sky1:"#EC9A5B", far:"#D08A50", mid:"#E0A265", gnd:"#DBA463", gnd2:"#B47C40", ob:"#8A5A2F", acc:"#FFF1D6", sun:"#FFE0A8"},
+  {n:"العُلا",        t:"mesa", sky0:"#F6C79C", sky1:"#D4784E", far:"#A75C3C", mid:"#C06B41", gnd:"#CF9159", gnd2:"#9F6437", ob:"#7A4224", acc:"#FFE6C6", sun:"#FFC98A"},
+  {n:"عسير",          t:"peak", sky0:"#CFE9E1", sky1:"#8CBCAE", far:"#4E7A67", mid:"#3B6552", gnd:"#2E5242", gnd2:"#213E32", ob:"#1E392D", acc:"#EAF7F1", sun:"#F4FBF7"},
+  {n:"الرياض",        t:"city", sky0:"#2B3F63", sky1:"#6B5A85", far:"#1E2C46", mid:"#16223A", gnd:"#111B2E", gnd2:"#0A1220", ob:"#0E1A2B", acc:"#FFD98A", sun:"#F6E3B0"},
+  {n:"البحر الأحمر", t:"sea",  sky0:"#C3E8F2", sky1:"#63C0D8", far:"#2E8FA8", mid:"#1E7793", gnd:"#0F5D79", gnd2:"#093F53", ob:"#0B6B84", acc:"#EAFBFF", sun:"#FFFDF2"},
+];
+REGIONS[0].maqam="hijaz"; REGIONS[1].maqam="rast"; REGIONS[2].maqam="nahawand";
+REGIONS[3].maqam="ajam";  REGIONS[4].maqam="kurd";
+
+const ORD = ["الأولى","الثانية","الثالثة","الرابعة","الخامسة","السادسة","السابعة","الثامنة","التاسعة","العاشرة"];
+
+/* ═══════════ الحالة ═══════════ */
+const cv = document.getElementById("game");
+const ctx = cv.getContext("2d");
+const W = 960, H = 540, GY = 470;
+const FX = 726;                       // مكان الصقر أفقياً (يمين الشاشة، يطير نحو اليسار)
+
+let state = "menu";
+let score, lives, level, dist, speed, spawnT, pickT, shield, invul, shake, over;
+let obs, picks, bits, pops, clouds, birds;
+let px, py, pv, thrusting, flap, tiltV;
+let regionA, regionB, mix;
+let best = 0;
+let muted = false;
+let last = 0, tAcc = 0;
+
+try { best = parseInt(localStorage.getItem("saqr.best") || "0", 10) || 0; } catch(e){ best = 0; }
+try { muted = localStorage.getItem("saqr.muted") === "1"; } catch(e){ muted = false; }
+
+/* ═══════════ الصوت والموسيقى ═══════════ */
+/* موسيقى مؤلَّفة تُعزف مباشرةً في المتصفح — بلا ملفات صوتية.
+   لكل منطقة مقام عربي: حجاز، رست (بأرباع الأنغام)، نهاوند، عجم، كرد. */
+
+let ac = null, master = null, musicBus = null, sfxBus = null, noiseBuf = null;
+let musicOn = true, ducked = false;
+let seqTimer = null, nextT = 0, stp = 0, bar = 0, intensity = 0;
+const MUSIC_VOL = 0.42;
+
+try { musicOn = localStorage.getItem("saqr.music") !== "0"; } catch(e){ musicOn = true; }
+
+function ensureAudio(){
+  if (ac) return ac;
+  try { ac = new (window.AudioContext || window.webkitAudioContext)(); }
+  catch(e){ return null; }
+  master   = ac.createGain(); master.gain.value = muted ? 0 : 0.9; master.connect(ac.destination);
+  musicBus = ac.createGain(); musicBus.gain.value = musicOn ? MUSIC_VOL : 0; musicBus.connect(master);
+  sfxBus   = ac.createGain(); sfxBus.gain.value = 1; sfxBus.connect(master);
+  const n = Math.floor(ac.sampleRate * 1.5);
+  noiseBuf = ac.createBuffer(1, n, ac.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i=0;i<n;i++) d[i] = Math.random()*2 - 1;
+  return ac;
+}
+function wake(){ const c = ensureAudio(); if (c && c.state === "suspended") c.resume(); return c; }
+
+/* ——— المؤثرات ——— */
+function sfx(freqs, dur, type, vol){
+  if (muted) return;
+  const c = wake(); if (!c) return;
+  try {
+    freqs.forEach(function(f,i){
+      const o = c.createOscillator(), g = c.createGain();
+      const t0 = c.currentTime + i*dur*0.55;
+      o.type = type || "triangle";
+      o.frequency.setValueAtTime(f, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol || 0.14, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(sfxBus);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    });
+  } catch(e){}
+}
+const sCollect = () => sfx([740, 988], .13, "triangle", .11);
+const sBanner  = () => sfx([523, 784, 1047], .16, "sine", .13);
+const sHit     = () => sfx([180, 90], .26, "sawtooth", .12);
+const sLevel   = () => sfx([523, 659, 784, 1047], .19, "sine", .12);
+const sPower   = () => sfx([392, 587, 880], .2, "sine", .13);
+const sOver    = () => sfx([392, 311, 233, 175], .3, "triangle", .12);
+
+/* ——— المقامات ——— */
+/* الأرقام أنصاف أنغام من القرار؛ والكسور أرباع أنغام حقيقية في مقام الرست */
+const MAQAM = {
+  hijaz:    [0, 1, 4, 5, 7, 8, 11, 12, 13, 16],
+  rast:     [0, 2, 3.5, 5, 7, 9, 10.5, 12, 14, 15.5],
+  nahawand: [0, 2, 3, 5, 7, 8, 10, 12, 14, 15],
+  ajam:     [0, 2, 4, 5, 7, 9, 11, 12, 14, 16],
+  kurd:     [0, 1, 3, 5, 7, 8, 10, 12, 13, 15]
+};
+const ROOT = 146.83;
+const hz = semi => ROOT * Math.pow(2, semi/12);
+function deg(i){
+  const sc = MAQAM[regionB.maqam] || MAQAM.hijaz;
+  const oct = Math.floor(i / 7), k = ((i % 7) + 7) % 7;
+  return sc[k] + oct*12;
+}
+
+/* عبارات لحنية: [درجة, طول] — مجموع كل عبارة مازورة كاملة */
+const PHRASES = [
+  [[0,2],[1,2],[2,2],[3,2],[4,4],[3,2],[2,2]],
+  [[4,2],[5,2],[4,2],[3,2],[2,4],[1,2],[0,2]],
+  [[2,2],[4,2],[7,4],[6,2],[5,2],[4,4]],
+  [[0,4],[3,2],[2,2],[4,4],[2,2],[0,2]],
+  [[7,2],[6,2],[5,2],[4,2],[3,4],[4,4]],
+  [[4,4],[3,2],[4,2],[5,4],[4,4]]
+];
+/* إيقاع المقسوم مع دقّ العرضة */
+const P_DUM  = [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0];
+const P_TEK  = [0,0,0,1, 1,0,0,0, 0,0,1,1, 1,0,0,1];
+const P_CLAP = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0];
+const BASS   = [0, 4, 0, 3];
+
+let bpm = 96;
+const stepDur = () => 60/bpm/4;
+
+/* ——— الأصوات ——— */
+function tone(t, f, dur, type, vol, opt){
+  opt = opt || {};
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  let tail = g;
+  if (opt.cut){
+    const fl = ac.createBiquadFilter();
+    fl.type = "lowpass"; fl.frequency.setValueAtTime(opt.cut, t); fl.Q.value = opt.q || 0.8;
+    g.connect(fl); tail = fl;
+  }
+  const a = opt.a === undefined ? 0.014 : opt.a;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, vol), t + a);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); tail.connect(musicBus);
+  if (opt.vib){
+    const lfo = ac.createOscillator(), lg = ac.createGain();
+    lfo.type = "sine"; lfo.frequency.value = 5.4; lg.gain.value = opt.vib;
+    lfo.connect(lg); lg.connect(o.frequency);
+    lfo.start(t + 0.06); lfo.stop(t + dur + 0.05);
+  }
+  o.start(t); o.stop(t + dur + 0.04);
+}
+function noiseHit(t, vol, freq, q, dur, type){
+  const s = ac.createBufferSource(); s.buffer = noiseBuf;
+  const f = ac.createBiquadFilter(); f.type = type || "bandpass"; f.frequency.value = freq; f.Q.value = q;
+  const g = ac.createGain();
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f); f.connect(g); g.connect(musicBus);
+  s.start(t); s.stop(t + dur + 0.02);
+}
+function dum(t, v){
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = "sine";
+  o.frequency.setValueAtTime(168, t);
+  o.frequency.exponentialRampToValueAtTime(48, t + 0.1);
+  g.gain.setValueAtTime(v, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+  o.connect(g); g.connect(musicBus);
+  o.start(t); o.stop(t + 0.28);
+  noiseHit(t, v*0.22, 320, 1.2, 0.05);
+}
+const tek = (t,v) => noiseHit(t, v, 2700, 1.7, 0.055);
+const riq = (t,v) => noiseHit(t, v, 6800, 0.9, 0.03);
+function clap(t,v){ for (let i=0;i<3;i++) noiseHit(t + i*0.013, v*(1 - i*0.28), 1300, 1.1, 0.075); }
+
+/* ——— الجدولة ——— */
+function schedBar(t0){
+  const sd = stepDur(), barLen = sd*16;
+
+  tone(t0, hz(deg(0) - 24), barLen*1.05, "sawtooth", 0.05, {cut:420, a:0.25});
+
+  const arp = [0, 2, 4, 2];
+  for (let i=0;i<4;i++){
+    const t = t0 + (i*4 + 2)*sd;
+    tone(t, hz(deg(arp[i] + 7)), sd*2.4, "triangle", intensity ? 0.055 : 0.04, {cut:2600, a:0.006});
+  }
+
+  const rest = (bar % 8 === 7) || (!intensity && bar % 2 === 1);
+  if (!rest){
+    const ph = PHRASES[(bar*2 + level) % PHRASES.length];
+    let at = 0;
+    ph.forEach(function(nt){
+      const t = t0 + at*sd, d = nt[1]*sd*0.92;
+      if (Math.random() < 0.22)
+        tone(t - sd*0.28, hz(deg(nt[0] + 8)), sd*0.3, "sawtooth", 0.03, {cut:2000, a:0.005});
+      tone(t, hz(deg(nt[0] + 7)), d, "sawtooth", intensity ? 0.075 : 0.045,
+           {cut:2200, q:1.1, a:0.02, vib: intensity ? 4 : 2});
+      at += nt[1];
+    });
+  }
+}
+
+function schedStep(i, t){
+  if (i === 0) schedBar(t);
+  if (!intensity) return;
+  if (P_DUM[i])  dum(t, 0.48);
+  if (P_TEK[i])  tek(t, 0.15);
+  if (P_CLAP[i]) clap(t, 0.11);
+  if (i % 2 === 1) riq(t, 0.045);
+  if (i % 4 === 0) tone(t, hz(deg(BASS[i/4]) - 12), stepDur()*3.4, "sawtooth", 0.085, {cut:340, a:0.02});
+}
+
+function scheduler(){
+  if (!ac) return;
+  while (nextT < ac.currentTime + 0.14){
+    if (nextT > ac.currentTime - 0.05) schedStep(stp, nextT);
+    nextT += stepDur();
+    if (++stp >= 16){ stp = 0; bar++; }
+  }
+}
+
+const music = {
+  begin(){
+    if (!wake()) return;
+    if (seqTimer) return;
+    nextT = ac.currentTime + 0.08; stp = 0; bar = 0;
+    seqTimer = setInterval(scheduler, 25);
+  },
+  set(i){ intensity = i; },
+  tempo(){ bpm = 96 + Math.min(34, (level-1)*5); },
+  gain(){
+    if (!musicBus) return;
+    const g = (muted || !musicOn) ? 0 : (ducked ? MUSIC_VOL*0.3 : MUSIC_VOL);
+    musicBus.gain.cancelScheduledValues(ac.currentTime);
+    musicBus.gain.setTargetAtTime(g, ac.currentTime, 0.12);
+  },
+  duck(on){ ducked = on; this.gain(); },
+  fill(){
+    if (!ac || !musicOn || muted) return;
+    const t = ac.currentTime;
+    noiseHit(t, 0.16, 5200, 0.6, 0.9, "highpass");
+    dum(t, 0.5);
+  }
+};
+
+/* ═══════════ الدقة ═══════════ */
+function fit(){
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = W*dpr; cv.height = H*dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+fit();
+window.addEventListener("resize", fit);
+
+/* ═══════════ بدء ═══════════ */
+function reset(){
+  score = 0; lives = 3; level = 1; dist = 0; speed = 250;
+  spawnT = 1.6; pickT = 1.1; shield = 0; invul = 0; shake = 0; over = 0;
+  obs = []; picks = []; bits = []; pops = [];
+  px = FX; py = 250; pv = 0; thrusting = false; flap = 0; tiltV = 0;
+  regionA = REGIONS[0]; regionB = REGIONS[0]; mix = 1;
+  clouds = []; for (let i=0;i<7;i++) clouds.push({x:rnd(0,W), y:rnd(40,240), s:rnd(.45,1.1), v:rnd(8,26)});
+  birds = []; for (let i=0;i<3;i++) birds.push({x:rnd(0,W), y:rnd(70,200), s:rnd(.5,.9), v:rnd(20,40), p:rnd(0,6)});
+  paint();
+}
+
+/* ═══════════ الرسم: الخلفيات ═══════════ */
+function R(k){ return mix >= 1 ? regionB[k] : mixc(regionA[k], regionB[k], mix); }
+
+function tile(step, off, par, fn){
+  const o = off*par;
+  const first = Math.floor(-o/step) - 1;
+  const last = first + Math.ceil(W/step) + 3;
+  for (let i=first;i<=last;i++) fn(i*step + o, i);
+}
+
+function drawSky(){
+  const g = ctx.createLinearGradient(0,0,0,GY);
+  g.addColorStop(0, R("sky0")); g.addColorStop(1, R("sky1"));
+  ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  // الشمس/القمر
+  ctx.globalAlpha = .55; ctx.fillStyle = R("sun");
+  ctx.beginPath(); ctx.arc(190, 128, 46, 0, 6.2832); ctx.fill();
+  ctx.globalAlpha = .16;
+  ctx.beginPath(); ctx.arc(190, 128, 78, 0, 6.2832); ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+function drawFar(off){
+  const c = R("far"); ctx.fillStyle = c;
+  const t = regionB.t;
+  if (t === "dune"){
+    ctx.beginPath(); ctx.moveTo(0,GY);
+    for (let x=0;x<=W;x+=12){
+      const o = off*.18;
+      ctx.lineTo(x, 330 + Math.sin((x+o)*.0052)*38 + Math.sin((x+o)*.0131)*16);
+    }
+    ctx.lineTo(W,GY); ctx.closePath(); ctx.fill();
+  } else if (t === "mesa"){
+    tile(210, off, .18, function(x,i){
+      const h = 90 + pseudo(i,1)*95, w = 110 + pseudo(i,2)*80;
+      ctx.fillRect(x, GY-h, w, h);
+      ctx.beginPath(); ctx.moveTo(x-14, GY-h); ctx.lineTo(x+w+14, GY-h); ctx.lineTo(x+w, GY-h-16); ctx.lineTo(x+8, GY-h-16); ctx.closePath(); ctx.fill();
+    });
+  } else if (t === "peak"){
+    tile(150, off, .18, function(x,i){
+      const h = 120 + pseudo(i,3)*130;
+      ctx.beginPath(); ctx.moveTo(x-40,GY); ctx.lineTo(x+55, GY-h); ctx.lineTo(x+150,GY); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,.5)";
+      ctx.beginPath(); ctx.moveTo(x+38, GY-h+26); ctx.lineTo(x+55,GY-h); ctx.lineTo(x+72,GY-h+26); ctx.lineTo(x+55,GY-h+16); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = c;
+    });
+  } else if (t === "city"){
+    tile(96, off, .18, function(x,i){
+      const h = 70 + pseudo(i,4)*180, w = 46 + pseudo(i,5)*30;
+      ctx.fillRect(x, GY-h, w, h);
+      if (pseudo(i,9) > .72){ // برج بفتحة (إيحاء برج المملكة)
+        ctx.clearRect(x+w*.22, GY-h+12, w*.56, 26);
+        ctx.fillStyle = R("sky1"); ctx.fillRect(x+w*.22, GY-h+12, w*.56, 26); ctx.fillStyle = c;
+      }
+      ctx.fillStyle = "rgba(255,217,138,.28)";
+      for (let k=0;k<5;k++){
+        const wy = GY-h+22+k*26;
+        if (wy < GY-14 && pseudo(i*7+k,6) > .42) ctx.fillRect(x+9, wy, w-18, 7);
+      }
+      ctx.fillStyle = c;
+    });
+  } else {
+    tile(260, off, .18, function(x,i){
+      const h = 40 + pseudo(i,7)*46, w = 150 + pseudo(i,8)*90;
+      ctx.beginPath(); ctx.moveTo(x,GY); ctx.quadraticCurveTo(x+w/2, GY-h*2.1, x+w, GY); ctx.closePath(); ctx.fill();
+    });
+  }
+}
+
+function drawMid(off){
+  ctx.fillStyle = R("mid");
+  const t = regionB.t;
+  if (t === "city"){
+    tile(64, off, .42, function(x,i){
+      const h = 40 + pseudo(i,11)*110;
+      ctx.fillRect(x, GY-h, 40 + pseudo(i,12)*18, h);
+    });
+  } else if (t === "sea"){
+    ctx.beginPath(); ctx.moveTo(0,GY);
+    for (let x=0;x<=W;x+=10) ctx.lineTo(x, GY-16 + Math.sin((x+off*.42)*.02)*6);
+    ctx.lineTo(W,GY); ctx.closePath(); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.moveTo(0,GY);
+    for (let x=0;x<=W;x+=10){
+      const o = off*.42;
+      ctx.lineTo(x, 396 + Math.sin((x+o)*.0074)*26 + Math.sin((x+o)*.019)*9);
+    }
+    ctx.lineTo(W,GY); ctx.closePath(); ctx.fill();
+  }
+  // نخيل في المقدمة المتوسطة
+  if (t === "dune" || t === "mesa" || t === "sea"){
+    tile(300, off, .42, function(x,i){
+      if (pseudo(i,13) < .45) return;
+      palm(x, GY-4, .8 + pseudo(i,14)*.4, "rgba(0,0,0,.28)");
+    });
+  }
+}
+
+function palm(x, y, s, col){
+  ctx.save(); ctx.translate(x,y); ctx.scale(s,s);
+  ctx.strokeStyle = col; ctx.lineCap = "round";
+  ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(0,0); ctx.quadraticCurveTo(-6,-40,2,-74); ctx.stroke();
+  ctx.lineWidth = 5;
+  for (let a=0;a<6;a++){
+    const dir = a<3 ? -1 : 1, k = a%3;
+    ctx.beginPath(); ctx.moveTo(2,-74);
+    ctx.quadraticCurveTo(dir*(20+k*10), -92-k*6, dir*(40+k*14), -70+k*10);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawGround(off){
+  const g = ctx.createLinearGradient(0,GY,0,H);
+  g.addColorStop(0, R("gnd")); g.addColorStop(1, R("gnd2"));
+  ctx.fillStyle = g; ctx.fillRect(0,GY,W,H-GY);
+  ctx.fillStyle = "rgba(0,0,0,.16)"; ctx.fillRect(0,GY,W,3);
+  if (regionB.t === "sea"){
+    ctx.strokeStyle = "rgba(255,255,255,.22)"; ctx.lineWidth = 2;
+    for (let r=0;r<4;r++){
+      ctx.beginPath();
+      for (let x=0;x<=W;x+=8) ctx.lineTo(x, GY+14+r*16 + Math.sin((x+off*(.7+r*.15))*.035)*3);
+      ctx.stroke();
+    }
+  } else {
+    ctx.fillStyle = "rgba(0,0,0,.13)";
+    tile(46, off, 1, function(x,i){
+      ctx.fillRect(x, GY + 10 + pseudo(i,15)*44, 12 + pseudo(i,16)*16, 3);
+    });
+  }
+}
+
+function drawClouds(dt){
+  ctx.fillStyle = "rgba(255,255,255,.42)";
+  clouds.forEach(function(c){
+    if (state === "play") c.x += (c.v + speed*.06)*dt;
+    if (c.x - 120*c.s > W){ c.x = -140*c.s; c.y = rnd(40,240); c.s = rnd(.45,1.1); }
+    ctx.save(); ctx.translate(c.x, c.y); ctx.scale(c.s, c.s);
+    ctx.beginPath();
+    ctx.arc(0,0,22,0,6.2832); ctx.arc(26,-9,27,0,6.2832); ctx.arc(56,2,20,0,6.2832); ctx.arc(28,10,24,0,6.2832);
+    ctx.fill(); ctx.restore();
+  });
+}
+
+function drawBirds(dt, t){
+  ctx.strokeStyle = "rgba(0,0,0,.3)"; ctx.lineWidth = 2; ctx.lineCap = "round";
+  birds.forEach(function(b){
+    if (state === "play") b.x += (b.v + speed*.12)*dt;
+    if (b.x > W+40){ b.x = -40; b.y = rnd(60,220); }
+    const w = Math.sin(t*6 + b.p)*5;
+    ctx.save(); ctx.translate(b.x,b.y); ctx.scale(b.s,b.s);
+    ctx.beginPath(); ctx.moveTo(-9,w); ctx.quadraticCurveTo(0,-5,9,w); ctx.stroke();
+    ctx.restore();
+  });
+}
+
+/* ═══════════ الصقر ═══════════ */
+function drawFalcon(x, y, t){
+  const wing = Math.sin(flap)*1;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(clamp(tiltV*.035, -.42, .5));
+  if (invul > 0 && Math.floor(t*14)%2 === 0) ctx.globalAlpha = .38;
+
+  if (shield > 0){
+    ctx.save();
+    ctx.strokeStyle = "rgba(47,191,113,.85)"; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(0,0,32 + Math.sin(t*7)*2, 0, 6.2832); ctx.stroke();
+    ctx.fillStyle = "rgba(47,191,113,.13)"; ctx.fill();
+    ctx.restore();
+  }
+
+  // الذيل
+  ctx.fillStyle = "#4E3620";
+  ctx.beginPath(); ctx.moveTo(16,-2); ctx.lineTo(38,-11); ctx.lineTo(36,2); ctx.lineTo(38,10); ctx.closePath(); ctx.fill();
+
+  // الجسم
+  ctx.fillStyle = "#7A5230";
+  ctx.beginPath(); ctx.ellipse(0,0,24,13,-0.06,0,6.2832); ctx.fill();
+  // البطن
+  ctx.fillStyle = "#E3CFA8";
+  ctx.beginPath(); ctx.ellipse(-3,4,16,8,-0.04,0,6.2832); ctx.fill();
+
+  // الرأس
+  ctx.fillStyle = "#6B4423";
+  ctx.beginPath(); ctx.arc(-21,-6,10.5,0,6.2832); ctx.fill();
+  // القناع
+  ctx.fillStyle = "#3C2716";
+  ctx.beginPath(); ctx.moveTo(-19,-11); ctx.quadraticCurveTo(-30,-9,-28,0); ctx.quadraticCurveTo(-22,-3,-19,-11); ctx.fill();
+  // المنقار
+  ctx.fillStyle = "#E8B23C";
+  ctx.beginPath(); ctx.moveTo(-30,-6); ctx.lineTo(-40,-2); ctx.lineTo(-29,1); ctx.closePath(); ctx.fill();
+  // العين
+  ctx.fillStyle = "#12100C";
+  ctx.beginPath(); ctx.arc(-24,-8,2.3,0,6.2832); ctx.fill();
+
+  // الجناح
+  ctx.fillStyle = "#5C3E24";
+  ctx.beginPath();
+  ctx.moveTo(6,-4);
+  ctx.quadraticCurveTo(-2, -20 - wing*17, 24, -14 - wing*22);
+  ctx.quadraticCurveTo(16, -2 - wing*5, 6, 3);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,.16)";
+  ctx.beginPath();
+  ctx.moveTo(8,-5);
+  ctx.quadraticCurveTo(4,-15-wing*11, 18,-12-wing*15);
+  ctx.quadraticCurveTo(13,-4-wing*4, 8,-1);
+  ctx.closePath(); ctx.fill();
+
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+/* ═══════════ العوائق ═══════════ */
+function spawnObs(){
+  const t = regionB.t;
+  const roll = Math.random();
+  let kind = roll < .46 ? "spire" : roll < .78 ? "hang" : "float";
+  if (level >= 3 && Math.random() < .16) kind = "float";
+
+  if (kind === "spire"){
+    const h = rnd(80, 150 + Math.min(70, level*10));
+    obs.push({k:"spire", x:-150, y:GY-h, w:rnd(46,74), h:h+6, seed:Math.random()*99});
+  } else if (kind === "hang"){
+    const h = rnd(70, 140 + Math.min(70, level*10));
+    obs.push({k:"hang", x:-150, y:0, w:rnd(44,70), h:h, seed:Math.random()*99});
+  } else {
+    obs.push({k:"float", x:-160, y:rnd(90, GY-150), w:78, h:58, bob:Math.random()*6, seed:Math.random()*99});
+  }
+  // زوج ضيّق في المستويات المتقدمة
+  if (level >= 4 && Math.random() < .3){
+    const gapY = rnd(170, 320), gap = clamp(210 - level*6, 148, 210);
+    obs.push({k:"hang",  x:-330, y:0, w:56, h:gapY-gap/2, seed:Math.random()*99});
+    obs.push({k:"spire", x:-330, y:gapY+gap/2, w:56, h:GY-(gapY+gap/2)+6, seed:Math.random()*99});
+  }
+}
+
+function drawObs(o, t){
+  const t2 = regionB.t;
+  const col = R("ob");
+  ctx.save();
+  if (o.k === "float"){
+    const yy = o.y + Math.sin(t*2 + o.bob)*7;
+    if (t2 === "city"){                      // منطاد إنارة
+      ctx.fillStyle = col; ctx.strokeStyle = "rgba(255,217,138,.6)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.ellipse(o.x+39, yy+26, 38, 22, 0, 0, 6.2832); ctx.fill();
+      ctx.fillStyle = "rgba(255,217,138,.75)"; ctx.fillRect(o.x+29, yy+44, 20, 10);
+    } else if (t2 === "sea"){                // سرب طيور بحرية
+      ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.lineCap = "round";
+      for (let i=0;i<3;i++){
+        const bx = o.x + i*26, by = yy + 16 + Math.sin(t*5 + i)*7;
+        ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx+11, by-10, bx+22, by); ctx.stroke();
+      }
+    } else {                                 // عاصفة رملية
+      ctx.fillStyle = col; ctx.globalAlpha = .85;
+      ctx.beginPath();
+      ctx.arc(o.x+22, yy+30, 20, 0, 6.2832); ctx.arc(o.x+46, yy+18, 25, 0, 6.2832);
+      ctx.arc(o.x+66, yy+31, 18, 0, 6.2832); ctx.arc(o.x+44, yy+40, 22, 0, 6.2832);
+      ctx.fill(); ctx.globalAlpha = 1;
+    }
+    ctx.restore(); return;
+  }
+
+  ctx.fillStyle = col;
+  if (t2 === "city"){
+    const y = o.k === "spire" ? o.y : 0;
+    ctx.fillRect(o.x, y, o.w, o.h);
+    ctx.fillStyle = "rgba(255,217,138,.3)";
+    for (let k=0;k<Math.floor(o.h/26);k++) ctx.fillRect(o.x+7, y+12+k*26, o.w-14, 8);
+  } else if (o.k === "spire"){
+    ctx.beginPath();
+    ctx.moveTo(o.x, GY+6);
+    ctx.lineTo(o.x + o.w*.16, o.y + 8);
+    ctx.lineTo(o.x + o.w*.5, o.y);
+    ctx.lineTo(o.x + o.w*.86, o.y + 12);
+    ctx.lineTo(o.x + o.w, GY+6);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,.1)";
+    ctx.beginPath(); ctx.moveTo(o.x+o.w*.5, o.y); ctx.lineTo(o.x+o.w*.86,o.y+12); ctx.lineTo(o.x+o.w, GY+6); ctx.lineTo(o.x+o.w*.62, GY+6); ctx.closePath(); ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(o.x, -6);
+    ctx.lineTo(o.x + o.w, -6);
+    ctx.lineTo(o.x + o.w*.84, o.h - 10);
+    ctx.lineTo(o.x + o.w*.5, o.h);
+    ctx.lineTo(o.x + o.w*.14, o.h - 14);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = "rgba(0,0,0,.14)";
+    ctx.beginPath(); ctx.moveTo(o.x,-6); ctx.lineTo(o.x+o.w*.36,-6); ctx.lineTo(o.x+o.w*.4,o.h-8); ctx.lineTo(o.x+o.w*.14,o.h-14); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function obsBox(o){
+  if (o.k === "float") return {x:o.x+12, y:o.y+10, w:o.w-22, h:o.h-18};
+  if (o.k === "spire") return {x:o.x+o.w*.2, y:o.y+8, w:o.w*.6, h:o.h-8};
+  return {x:o.x+o.w*.2, y:0, w:o.w*.6, h:o.h-8};
+}
+
+/* ═══════════ المقتنيات ═══════════ */
+function spawnPicks(){
+  const r = Math.random();
+  let kind = "date";
+  if (r > .68) kind = "banner";
+  if (r > .93) kind = "shield";
+  if (r > .985 && lives < 3) kind = "heart";
+
+  if (kind === "shield" || kind === "heart"){
+    picks.push({k:kind, x:-70, y:rnd(120, GY-120), ph:Math.random()*6});
+    return;
+  }
+  const n = 4 + Math.floor(Math.random()*3);
+  const base = rnd(140, GY-140), amp = rnd(-58, 58);
+  for (let i=0;i<n;i++){
+    picks.push({k:kind, x:-70 - i*46, y:base + Math.sin(i/(n-1)*Math.PI)*amp, ph:Math.random()*6});
+  }
+}
+
+function drawPick(p, t){
+  const y = p.y + Math.sin(t*3 + p.ph)*4;
+  ctx.save(); ctx.translate(p.x, y);
+  if (p.k === "date"){
+    ctx.strokeStyle = "#6B8F3E"; ctx.lineWidth = 2.5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(0,-13); ctx.lineTo(0,-6); ctx.stroke();
+    ctx.fillStyle = "#8B5A2B";
+    [[-6,0],[6,1],[0,8]].forEach(function(d){
+      ctx.beginPath(); ctx.ellipse(d[0], d[1], 6, 8.5, .2, 0, 6.2832); ctx.fill();
+    });
+    ctx.fillStyle = "rgba(217,164,65,.75)";
+    ctx.beginPath(); ctx.ellipse(-7,-2,2,3,.2,0,6.2832); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(5,-1,2,3,.2,0,6.2832); ctx.fill();
+  } else if (p.k === "banner"){
+    const wv = Math.sin(t*5 + p.ph)*4;
+    ctx.strokeStyle = "#C9B48A"; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(11,-18); ctx.lineTo(11,20); ctx.stroke();
+    ctx.fillStyle = "#006C35";
+    ctx.beginPath();
+    ctx.moveTo(11,-17);
+    ctx.quadraticCurveTo(-4,-15+wv,-19,-17);
+    ctx.lineTo(-19,3+wv*.5); ctx.quadraticCurveTo(-4,5-wv,11,3);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 1.8; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(-4,-11); ctx.lineTo(-4,-2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-4,-8); ctx.quadraticCurveTo(-11,-11,-12,-14); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-4,-8); ctx.quadraticCurveTo(3,-11,4,-14); ctx.stroke();
+  } else if (p.k === "shield"){
+    ctx.fillStyle = "#57D6A0"; ctx.globalAlpha = .22;
+    ctx.beginPath(); ctx.arc(0,0,22 + Math.sin(t*6)*2,0,6.2832); ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#006C35"; ctx.strokeStyle = "#9BEFC8"; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0,-15); ctx.lineTo(13,-9); ctx.lineTo(13,4); ctx.quadraticCurveTo(13,13,0,17);
+    ctx.quadraticCurveTo(-13,13,-13,4); ctx.lineTo(-13,-9); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "#EBDCC0"; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(0,-4); ctx.lineTo(0,8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-2); ctx.quadraticCurveTo(-8,-5,-9,-9); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-2); ctx.quadraticCurveTo(8,-5,9,-9); ctx.stroke();
+  } else {
+    ctx.fillStyle = "#E0654F";
+    ctx.beginPath();
+    ctx.moveTo(0,14); ctx.quadraticCurveTo(-16,2,-16,-5);
+    ctx.quadraticCurveTo(-16,-15,-7,-15); ctx.quadraticCurveTo(0,-15,0,-7);
+    ctx.quadraticCurveTo(0,-15,7,-15); ctx.quadraticCurveTo(16,-15,16,-5);
+    ctx.quadraticCurveTo(16,2,0,14); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function pickBox(p){
+  const r = p.k === "date" ? 15 : 19;
+  return {x:p.x-r, y:p.y-r, w:r*2, h:r*2};
+}
+const VAL = {date:5, banner:12, shield:0, heart:0};
+
+/* ═══════════ الجسيمات ═══════════ */
+function burst(x,y,col,n){
+  for (let i=0;i<(n||10);i++){
+    bits.push({x:x, y:y, vx:rnd(-150,150), vy:rnd(-170,90), l:rnd(.4,.85), c:col, s:rnd(2,5)});
+  }
+}
+function pop(x,y,txt,col){ pops.push({x:x, y:y, t:0, txt:txt, c:col}); }
+
+/* ═══════════ التصادم ═══════════ */
+function overlap(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
+function falconBox(){ return {x:px-26, y:py-13, w:50, h:26}; }
+
+function damage(){
+  if (invul > 0) return;
+  if (shield > 0){
+    shield = 0; invul = 1.1; shake = .35;
+    burst(px, py, "#57D6A0", 16); sHit();
+    return;
+  }
+  lives--; invul = 1.6; shake = .55;
+  burst(px, py, "#E0654F", 18); sHit(); paint();
+  if (lives <= 0) gameOver();
+}
+
+function gameOver(){
+  state = "over";
+  const isBest = score > best;
+  if (isBest){ best = Math.floor(score); try { localStorage.setItem("saqr.best", String(best)); } catch(e){} }
+  music.set(0); music.duck(false);
+  sOver(); paint(); showOver(isBest);
+}
+
+/* ═══════════ المستويات ═══════════ */
+function levelUp(){
+  level++;
+  speed = 250 + (level-1)*24;
+  regionA = regionB;
+  regionB = REGIONS[(level-1) % REGIONS.length];
+  mix = 0;
+  const b = document.getElementById("banner");
+  document.getElementById("bsm").textContent = "المنطقة " + (ORD[(level-1) % ORD.length] || "التالية");
+  document.getElementById("blg").textContent = regionB.n;
+  b.classList.remove("show"); void b.offsetWidth; b.classList.add("show");
+  music.tempo(); music.fill();
+  sLevel(); paint();
+}
+
+/* ═══════════ التحديث ═══════════ */
+function update(dt, t){
+  if (mix < 1) mix = Math.min(1, mix + dt*0.9);
+  if (shake > 0) shake = Math.max(0, shake - dt*1.6);
+
+  if (state !== "play"){
+    dist += 40*dt;                       // العالم يتنفس في القائمة
+    flap += dt*7;
+    py = 250 + Math.sin(t*1.7)*22;
+    tiltV = Math.cos(t*1.7)*-14;
+    return;
+  }
+
+  dist += speed*dt;
+  score += dt*7;
+
+  // الحركة
+  pv += (thrusting ? -1180 : 980) * dt;
+  pv = clamp(pv, -420, 520);
+  py += pv*dt;
+  tiltV = pv*.55;
+  flap += dt*(thrusting ? 22 : 9);
+
+  if (py < 26){ py = 26; pv = 0; }
+  if (py > GY-20){ py = GY-20; pv = 0; damage(); }
+
+  if (shield > 0) shield = Math.max(0, shield - dt);
+  if (invul > 0) invul = Math.max(0, invul - dt);
+
+  // التوليد
+  spawnT -= dt;
+  if (spawnT <= 0){ spawnObs(); spawnT = Math.max(.78, 1.75 - level*.1) * rnd(.85,1.2); }
+  pickT -= dt;
+  if (pickT <= 0){ spawnPicks(); pickT = rnd(1.7, 3.1); }
+
+  // العوائق
+  const fb = falconBox();
+  for (let i=obs.length-1;i>=0;i--){
+    const o = obs[i];
+    o.x += speed*dt;
+    if (o.x > W+220){ obs.splice(i,1); continue; }
+    if (overlap(fb, obsBox(o))) damage();
+  }
+
+  // المقتنيات
+  for (let i=picks.length-1;i>=0;i--){
+    const p = picks[i];
+    p.x += speed*dt;
+    if (p.x > W+90){ picks.splice(i,1); continue; }
+    if (!overlap(fb, pickBox(p))) continue;
+    picks.splice(i,1);
+    if (p.k === "shield"){
+      shield = 6.5; burst(p.x,p.y,"#57D6A0",14); pop(p.x,p.y,"درع!","#57D6A0"); sPower();
+    } else if (p.k === "heart"){
+      lives = Math.min(3, lives+1); burst(p.x,p.y,"#E0654F",14); pop(p.x,p.y,"حياة +","#E0654F"); sPower();
+    } else {
+      score += VAL[p.k];
+      burst(p.x,p.y, p.k === "banner" ? "#2FBF71" : "#D9A441", 9);
+      pop(p.x,p.y,"+"+ar(VAL[p.k]), p.k === "banner" ? "#9BEFC8" : "#F0CE85");
+      p.k === "banner" ? sBanner() : sCollect();
+    }
+    paint();
+  }
+
+  // الجسيمات
+  for (let i=bits.length-1;i>=0;i--){
+    const b = bits[i];
+    b.l -= dt; if (b.l <= 0){ bits.splice(i,1); continue; }
+    b.x += b.vx*dt; b.y += b.vy*dt; b.vy += 620*dt;
+  }
+  for (let i=pops.length-1;i>=0;i--){
+    pops[i].t += dt; if (pops[i].t > .9) pops.splice(i,1);
+  }
+
+  if (score >= level*350) levelUp();
+}
+
+/* ═══════════ العرض ═══════════ */
+function render(t, dt){
+  ctx.save();
+  if (shake > 0) ctx.translate(rnd(-1,1)*shake*11, rnd(-1,1)*shake*11);
+
+  drawSky();
+  drawFar(dist);
+  drawClouds(dt);
+  drawMid(dist);
+  drawBirds(dt, t);
+  drawGround(dist);
+
+  obs.forEach(function(o){ drawObs(o, t); });
+  picks.forEach(function(p){ drawPick(p, t); });
+
+  bits.forEach(function(b){
+    ctx.globalAlpha = clamp(b.l*1.5, 0, 1);
+    ctx.fillStyle = b.c; ctx.fillRect(b.x, b.y, b.s, b.s);
+  });
+  ctx.globalAlpha = 1;
+
+  drawFalcon(px, py, t);
+
+  ctx.textAlign = "center";
+  ctx.font = '600 19px "IBM Plex Sans Arabic", sans-serif';
+  pops.forEach(function(p){
+    ctx.globalAlpha = clamp(1 - p.t/.9, 0, 1);
+    ctx.fillStyle = p.c;
+    ctx.fillText(p.txt, p.x, p.y - 22 - p.t*34);
+  });
+  ctx.globalAlpha = 1;
+
+  // مؤقت الدرع
+  if (shield > 0 && state === "play"){
+    ctx.fillStyle = "rgba(8,20,16,.55)"; ctx.fillRect(W/2-62, H-34, 124, 8);
+    ctx.fillStyle = "#57D6A0"; ctx.fillRect(W/2-60, H-32, 120*(shield/6.5), 4);
+  }
+
+  // تعتيم عند الإيقاف
+  if (state === "pause"){
+    ctx.fillStyle = "rgba(6,15,12,.5)"; ctx.fillRect(0,0,W,H);
+  }
+  ctx.restore();
+}
+
+/* ═══════════ الحلقة ═══════════ */
+function loop(now){
+  requestAnimationFrame(loop);
+  if (!last) last = now;
+  let dt = (now - last)/1000; last = now;
+  dt = Math.min(dt, .05);
+  tAcc += dt;
+  if (state !== "pause") update(dt, tAcc);
+  render(tAcc, state === "pause" ? 0 : dt);
+}
+
+/* ═══════════ الواجهة ═══════════ */
+const WING = '<svg viewBox="0 0 24 24" fill="none" stroke="#2FBF71" stroke-width="2" stroke-linecap="round"><path d="M2 15c5 1 9-1 11-5 1 5-1 9-5 11-3 1-6-2-6-6z"/><path d="M13 10c4-1 7 0 9 2"/></svg>';
+
+function paint(){
+  document.getElementById("score").textContent = ar(score);
+  document.getElementById("best").textContent = ar(best);
+  document.getElementById("region").textContent = regionB.n;
+  let h = "";
+  for (let i=0;i<3;i++) h += '<span class="' + (i < lives ? "" : "off") + '">' + WING + '</span>';
+  document.getElementById("lives").innerHTML = h;
+}
+
+const ov = document.getElementById("overlay");
+
+function showMenu(){
+  ov.hidden = false;
+  ov.innerHTML =
+    '<div class="card">' +
+      '<h2>حلّق فوق <em>خمس مناطق</em><br>في يوم الوطن</h2>' +
+      '<p>أنت صقر يعبر المملكة من رمال النَّفُود إلى البحر الأحمر. اجمع التمر والبيارق، وتفادَ الصخور والعواصف.</p>' +
+      '<div class="rules">' +
+        '<span class="rule"><i class="chip d"></i> تمر <b>+٥</b></span>' +
+        '<span class="rule"><i class="chip b"></i> بيرق <b>+١٢</b></span>' +
+        '<span class="rule"><i class="chip s"></i> درع لِستّ ثوانٍ</span>' +
+        '<span class="rule"><i class="chip x"></i> اصطدام = حياة</span>' +
+      '</div>' +
+      '<button class="play" data-act="start">ابدأ الطيران</button>' +
+      '<div class="keys">اضغط <kbd>مسافة</kbd> للارتفاع — واتركها لتنزلق<br>الموسيقى تتغيّر مقامها مع كل منطقة</div>' +
+    '</div>';
+}
+
+function showPause(){
+  ov.hidden = false;
+  ov.innerHTML =
+    '<div class="card">' +
+      '<h2>إيقاف مؤقت</h2>' +
+      '<p>الصقر ينتظر إشارتك.</p>' +
+      '<button class="play" data-act="resume">أكمل</button>' +
+      '<div class="keys"><kbd>P</kbd> للاستئناف — <kbd>R</kbd> لجولة جديدة</div>' +
+    '</div>';
+}
+
+function showOver(isBest){
+  ov.hidden = false;
+  const msg = score >= 1400 ? "طيران يليق باليوم الوطني."
+            : score >= 700  ? "وصلت بعيداً — أبعد قليلاً هذه المرة."
+            : "الرحلة طويلة، والسماء واسعة.";
+  ov.innerHTML =
+    '<div class="card">' +
+      '<h2>هبط الصقر</h2>' +
+      '<div class="tally">' +
+        '<div><span class="n">' + ar(score) + '</span><span class="k">النقاط</span></div>' +
+        '<div><span class="n gold">' + ar(best) + '</span><span class="k">الأفضل</span></div>' +
+        '<div><span class="n">' + ar(level) + '</span><span class="k">المناطق</span></div>' +
+      '</div>' +
+      (isBest ? '<div class="newbest">رقم قياسي جديد</div>' : '') +
+      '<p>' + msg + '</p>' +
+      '<button class="play" data-act="start">جولة أخرى</button>' +
+      '<div class="keys"><kbd>Enter</kbd> لإعادة المحاولة</div>' +
+    '</div>';
+}
+
+function start(){
+  reset();
+  state = "play";
+  ov.hidden = true;
+  ov.innerHTML = "";
+  music.tempo(); music.begin(); music.set(1); music.duck(false);
+  showTouchHint();
+  sLevel();
+}
+function pause(){ if (state === "play"){ state = "pause"; music.duck(true); showPause(); } }
+function resume(){
+  if (state === "pause"){ state = "play"; music.duck(false); ov.hidden = true; ov.innerHTML = ""; }
+}
+
+ov.addEventListener("click", function(e){
+  const b = e.target.closest("[data-act]");
+  if (!b) return;
+  if (b.dataset.act === "start") start();
+  if (b.dataset.act === "resume") resume();
+});
+
+/* ——— الصوت ——— */
+const SPK_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+const SPK_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 5 6"/><path d="m21 9-5 6"/></svg>';
+const NOTE_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>';
+const NOTE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v6"/><circle cx="6" cy="18" r="3"/><path d="m16 14 6 6"/><path d="m22 14-6 6"/></svg>';
+const mb = document.getElementById("mute");
+const gb = document.getElementById("bgm");
+
+function paintMute(){
+  mb.innerHTML = muted ? SPK_OFF : SPK_ON;
+  mb.title = muted ? "تشغيل الصوت" : "كتم الصوت";
+  mb.setAttribute("aria-label", mb.title);
+  mb.style.color = muted ? "var(--muted)" : "var(--flag-lit)";
+
+  const off = muted || !musicOn;
+  gb.innerHTML = musicOn ? NOTE_ON : NOTE_OFF;
+  gb.title = musicOn ? "إيقاف الموسيقى" : "تشغيل الموسيقى";
+  gb.setAttribute("aria-label", gb.title);
+  gb.style.color = off ? "var(--muted)" : "var(--gold)";
+}
+
+mb.addEventListener("click", function(e){
+  e.stopPropagation();
+  muted = !muted;
+  try { localStorage.setItem("saqr.muted", muted ? "1" : "0"); } catch(err){}
+  const c = muted ? ac : wake();
+  if (c && master) master.gain.setTargetAtTime(muted ? 0 : 0.9, c.currentTime, 0.06);
+  if (!muted && musicOn) music.begin();
+  music.gain();
+  paintMute();
+});
+
+gb.addEventListener("click", function(e){
+  e.stopPropagation();
+  musicOn = !musicOn;
+  try { localStorage.setItem("saqr.music", musicOn ? "1" : "0"); } catch(err){}
+  if (musicOn){ wake(); music.begin(); }
+  music.gain();
+  paintMute();
+});
+paintMute();
+
+/* ——— الإدخال ——— */
+const stage = document.getElementById("stage");
+
+/*
+  الأصابع تُحصى ولا تُقاس بمفتاح واحد.
+  ⚠️ إصبع ينزل وآخر يرتفع حادث عادي على الجوال؛ ومع علم واحد
+  يُطفئ الدفع واللاعب ما زال ضاغطاً — فيسقط الصقر فجأة بلا سبب ظاهر.
+*/
+const touches = new Set();
+let keyHold = false;
+function syncThrust(){ thrusting = (keyHold || touches.size > 0) && state === "play"; }
+
+function press(src){
+  if (src === "key") keyHold = true;
+  if (state === "play"){ syncThrust(); return; }
+  if (state === "menu" || state === "over") start();
+  else if (state === "pause") resume();
+  syncThrust();
+}
+function lift(src){
+  if (src === "key") keyHold = false;
+  syncThrust();
+}
+function allOff(){ touches.clear(); keyHold = false; thrusting = false; }
+
+stage.addEventListener("pointerdown", function(e){
+  if (e.target.closest("button")) return;
+  e.preventDefault();
+  touches.add(e.pointerId);
+  press("touch");
+});
+function endTouch(e){ touches.delete(e.pointerId); lift("touch"); }
+window.addEventListener("pointerup", endTouch);
+window.addEventListener("pointercancel", endTouch);
+stage.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+
+window.addEventListener("keydown", function(e){
+  const k = e.key.toLowerCase();
+  if (k === " " || k === "arrowup" || k === "w"){ e.preventDefault(); press("key"); }
+  else if (k === "enter"){ if (state === "menu" || state === "over") start(); }
+  else if (k === "p" || k === "escape"){ state === "play" ? pause() : resume(); }
+  else if (k === "r"){ if (state !== "menu") start(); }
+  else if (k === "m"){ mb.click(); }
+  else if (k === "n"){ gb.click(); }
+});
+window.addEventListener("keyup", function(e){
+  const k = e.key.toLowerCase();
+  if (k === " " || k === "arrowup" || k === "w") lift("key");
+});
+window.addEventListener("blur", function(){ allOff(); pause(); });
+
+/* تبديل التطبيقات على الجوال يوقِف اللعبة ولا يقتلها */
+document.addEventListener("visibilitychange", function(){
+  if (document.hidden){ allOff(); pause(); }
+  else if (!muted && musicOn) wake();
+});
+
+/* ——— ملء الشاشة ——— */
+const fsBtn = document.getElementById("fs");
+const FS_IN  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>';
+const FS_OUT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>';
+const canFS = !!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen);
+if (canFS){
+  fsBtn.hidden = false;
+  const paintFS = () => { fsBtn.innerHTML = document.fullscreenElement ? FS_OUT : FS_IN; };
+  paintFS();
+  fsBtn.addEventListener("click", function(e){
+    e.stopPropagation();
+    const el = document.documentElement;
+    if (document.fullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+  });
+  document.addEventListener("fullscreenchange", paintFS);
+}
+
+/* ——— أدِر جوالك ——— */
+/*
+  ملعب 16:9 في شاشة عمودية يصير شريطاً بارتفاع إصبعين.
+  نطلب الدوران ولا نفرضه: من لا يقدر — قفل دوران، أو جهاز مثبت — يتجاوزه.
+*/
+const rotEl = document.getElementById("rotate");
+const mqPortrait = window.matchMedia("(orientation: portrait) and (max-width: 860px)");
+let ignoreRotate = false;
+function checkRotate(){
+  const show = mqPortrait.matches && !ignoreRotate;
+  rotEl.hidden = !show;
+  if (show && state === "play"){ allOff(); pause(); }
+}
+if (mqPortrait.addEventListener) mqPortrait.addEventListener("change", checkRotate);
+else mqPortrait.addListener(checkRotate);
+document.getElementById("anyway").addEventListener("click", function(){
+  ignoreRotate = true; checkRotate();
+});
+checkRotate();
+
+/* ——— تلميح اللمس في أول جولة ——— */
+const hintEl = document.getElementById("touchhint");
+let hintShown = false;
+function showTouchHint(){
+  if (hintShown || !window.matchMedia("(pointer: coarse)").matches) return;
+  hintShown = true;
+  hintEl.classList.add("on");
+  setTimeout(function(){ hintEl.classList.remove("on"); }, 3600);
+}
+
+/* ——— انطلاق ——— */
+reset();
+showMenu();
+requestAnimationFrame(loop);
+
+})();
+</script>
+
+</body>
+</html>
