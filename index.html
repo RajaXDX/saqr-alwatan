@@ -1097,6 +1097,7 @@ function update(dt, t){
 
   dist += speed*dt;
   score += dt*7;
+  paintScore();
 
   // الحركة
   pv += (thrusting ? -1180 : 980) * dt;
@@ -1218,7 +1219,20 @@ function loop(now){
 /* ═══════════ الواجهة ═══════════ */
 const WING = '<svg viewBox="0 0 24 24" fill="none" stroke="#2FBF71" stroke-width="2" stroke-linecap="round"><path d="M2 15c5 1 9-1 11-5 1 5-1 9-5 11-3 1-6-2-6-6z"/><path d="M13 10c4-1 7 0 9 2"/></svg>';
 
+/*
+  ⚠️ النقاط تُكتب عند تغيّر الصحيح لا في كل إطار: الرقم يزيد سبع
+  نقاط في الثانية، فكتابته ستين مرّة في الثانية تُعيد تخطيط النص بلا داعٍ.
+*/
+let shownScore = -1;
+function paintScore(){
+  const v = Math.floor(score);
+  if (v === shownScore) return;
+  shownScore = v;
+  document.getElementById("score").textContent = ar(v);
+}
+
 function paint(){
+  shownScore = Math.floor(score);
   document.getElementById("score").textContent = ar(score);
   document.getElementById("best").textContent = ar(best);
   document.getElementById("region").textContent = regionB.n;
