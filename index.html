@@ -420,6 +420,17 @@ const ORD = ["الأولى","الثانية","الثالثة","الرابعة","
 const cv = document.getElementById("game");
 const ctx = cv.getContext("2d");
 const W = 960, H = 540, GY = 470;
+
+/*
+  ثوابت الإحساس — مسمّاة لأنّها تُضبط بالتجربة لا مرّة واحدة.
+  الدفع يُحلّ محلّ الجاذبية ولا يُضاف إليها، فنسبتهما (٥٣٪ـ) هي ما يحفظ
+  التوازن: تخفيف الجاذبية وحدها يجعل الصقر ينطلق إلى السقف عند أول لمسة.
+*/
+const GRAV = 760, LIFT = 900;          /* تسارع الهبوط والصعود (بكسل/ثانية²) */
+const VDOWN = 430, VUP = 380;          /* أقصى سرعة رأسية */
+const SHIELD_T = 10;                   /* عمر الدرع بالثواني */
+const INVUL_HIT = 2.4;                 /* وميض الحماية بعد فقد حياة */
+const INVUL_SHIELD = 1.6;              /* وميضها حين يمتصّ الدرع الضربة */
 const FX = 726;                       // مكان الصقر أفقياً (يمين الشاشة، يطير نحو اليسار)
 
 let state = "menu";
@@ -1090,11 +1101,11 @@ function falconBox(){ return {x:px-26, y:py-13, w:50, h:26}; }
 function damage(){
   if (invul > 0) return;
   if (shield > 0){
-    shield = 0; invul = 1.1; shake = .35;
+    shield = 0; invul = INVUL_SHIELD; shake = .35;
     burst(px, py, "#57D6A0", 16); sHit();
     return;
   }
-  lives--; invul = 1.6; shake = .55;
+  lives--; invul = INVUL_HIT; shake = .55;
   burst(px, py, "#E0654F", 18); sHit(); paint();
   if (lives <= 0) gameOver();
 }
@@ -1140,8 +1151,8 @@ function update(dt, t){
   paintScore();
 
   // الحركة
-  pv += (thrusting ? -1180 : 980) * dt;
-  pv = clamp(pv, -420, 520);
+  pv += (thrusting ? -LIFT : GRAV) * dt;
+  pv = clamp(pv, -VUP, VDOWN);
   py += pv*dt;
   tiltV = pv*.55;
   flap += dt*(thrusting ? 22 : 9);
@@ -1175,7 +1186,7 @@ function update(dt, t){
     if (!overlap(fb, pickBox(p))) continue;
     picks.splice(i,1);
     if (p.k === "shield"){
-      shield = 6.5; burst(p.x,p.y,"#57D6A0",14); pop(p.x,p.y,"درع!","#57D6A0"); sPower();
+      shield = SHIELD_T; burst(p.x,p.y,"#57D6A0",14); pop(p.x,p.y,"درع!","#57D6A0"); sPower();
     } else if (p.k === "heart"){
       lives = Math.min(3, lives+1); burst(p.x,p.y,"#E0654F",14); pop(p.x,p.y,"حياة +","#E0654F"); sPower();
     } else {
@@ -1235,7 +1246,7 @@ function render(t, dt){
   // مؤقت الدرع
   if (shield > 0 && state === "play"){
     ctx.fillStyle = "rgba(8,20,16,.55)"; ctx.fillRect(W/2-62, H-34, 124, 8);
-    ctx.fillStyle = "#57D6A0"; ctx.fillRect(W/2-60, H-32, 120*(shield/6.5), 4);
+    ctx.fillStyle = "#57D6A0"; ctx.fillRect(W/2-60, H-32, 120*(shield/SHIELD_T), 4);
   }
 
   // تعتيم عند الإيقاف
@@ -1292,7 +1303,7 @@ function showMenu(){
       '<div class="rules">' +
         '<span class="rule"><i class="chip d"></i> تمر <b>+٥</b></span>' +
         '<span class="rule"><i class="chip b"></i> بيرق <b>+١٢</b></span>' +
-        '<span class="rule"><i class="chip s"></i> درع لِستّ ثوانٍ</span>' +
+        '<span class="rule"><i class="chip s"></i> درع لعشر ثوانٍ</span>' +
         '<span class="rule"><i class="chip x"></i> اصطدام = حياة</span>' +
       '</div>' +
       '<button class="play" data-act="start">ابدأ الطيران</button>' +
