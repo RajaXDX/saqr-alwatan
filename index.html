@@ -428,7 +428,7 @@ const W = 960, H = 540, GY = 470;
 */
 const GRAV = 760, LIFT = 900;          /* تسارع الهبوط والصعود (بكسل/ثانية²) */
 const VDOWN = 430, VUP = 380;          /* أقصى سرعة رأسية */
-const SHIELD_T = 10;                   /* عمر الدرع بالثواني */
+const SHIELD_T = 15;                   /* عمر الدرع بالثواني */
 const INVUL_HIT = 2.4;                 /* وميض الحماية بعد فقد حياة */
 const INVUL_SHIELD = 1.6;              /* وميضها حين يمتصّ الدرع الضربة */
 const FX = 726;                       // مكان الصقر أفقياً (يمين الشاشة، يطير نحو اليسار)
@@ -452,7 +452,7 @@ try { muted = localStorage.getItem("saqr.muted") === "1"; } catch(e){ muted = fa
 let ac = null, master = null, musicBus = null, sfxBus = null, noiseBuf = null;
 let musicOn = true, ducked = false;
 let seqTimer = null, nextT = 0, stp = 0, bar = 0, intensity = 0;
-const MUSIC_VOL = 0.42;
+const MUSIC_VOL = 0.28;
 
 try { musicOn = localStorage.getItem("saqr.music") !== "0"; } catch(e){ musicOn = true; }
 
@@ -505,7 +505,13 @@ const MAQAM = {
   ajam:     [0, 2, 4, 5, 7, 9, 11, 12, 14, 16],
   kurd:     [0, 1, 3, 5, 7, 8, 10, 12, 13, 15]
 };
-const ROOT = 146.83;
+/*
+  القرار دو (C3) والإيقاع ١٢٠ — مقاسان مأخوذان من تحليل أغنية وطنية
+  اختارها صاحب المشروع: طيفها دياتوني بلا أرباع أنغام، وأقوى درجاته دو.
+  المأخوذ مقاسات لا لحن: السرعة والمركز والطابع عامّة لا يملكها أحد،
+  واللحن هنا تأليف مستقلّ بالكامل.
+*/
+const ROOT = 130.81;
 const hz = semi => ROOT * Math.pow(2, semi/12);
 function deg(i){
   const sc = MAQAM[regionB.maqam] || MAQAM.ajam;
@@ -534,9 +540,10 @@ const THEME = [
 const P_BOOM  = [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0];
 const P_SNARE = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,1];
 const P_HAT   = [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0];
+const P_CLAP  = [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0];
 const BASS    = [0, 4, 0, 4];
 
-let bpm = 108;
+let bpm = 120;
 const stepDur = () => 60/bpm/4;
 
 /* ——— الأصوات ——— */
@@ -603,6 +610,25 @@ function boom(t, v){                       /* طبل المسيرة */
 const snare  = (t,v) => { noiseHit(t, v, 1900, 0.8, 0.095); noiseHit(t, v*0.5, 3400, 1.4, 0.05); };
 const hat    = (t,v) => noiseHit(t, v, 7200, 0.9, 0.028);
 const cymbal = (t,v) => noiseHit(t, v, 5600, 0.5, 0.85, "highpass");
+/* تصفيق جماعي: ثلاث ضربات متقاربة لا ضربة واحدة — التباعد هو ما يجعله جمهوراً */
+function clap(t, v){
+  for (let i = 0; i < 3; i++) noiseHit(t + i*0.014, v*(1 - i*0.26), 1250, 1.1, 0.08);
+}
+/* كورس: ثلاث مولّدات مزاحة بمطلع بطيء — الأناشيد تُغنّى جماعة لا فرداً */
+function choir(t, f, dur, vol){
+  [1, 1.005, 0.996].forEach(function(m, i){
+    const o = ac.createOscillator(), g = ac.createGain(), fl = ac.createBiquadFilter();
+    o.type = i === 0 ? "triangle" : "sine";
+    o.frequency.setValueAtTime(f*m, t);
+    fl.type = "lowpass"; fl.frequency.value = 1500;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.30);
+    g.gain.setValueAtTime(vol, t + dur*0.72);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(fl); fl.connect(musicBus);
+    o.start(t); o.stop(t + dur + 0.06);
+  });
+}
 const dum    = boom;                       /* يُستعمل في التحولات */
 
 /* ——— الجدولة ——— */
@@ -612,6 +638,10 @@ function schedBar(t0){
   const loud = !!intensity;
 
   if (bar % 4 === 0) cymbal(t0, loud ? 0.10 : 0.05);
+
+  /* كورس يمدّ القرار والخامسة تحت النحاس طول المازورة */
+  choir(t0, hz(deg(0)), sd*16*0.98, loud ? 0.030 : 0.020);
+  choir(t0, hz(deg(4)), sd*16*0.98, loud ? 0.022 : 0.014);
 
   /* عود خفيف على الضعيف — النكهة العربية تحت النحاس */
   [2, 6, 10, 14].forEach(function(i, k){
@@ -642,6 +672,7 @@ function schedStep(i, t){
   if (P_BOOM[i])  boom(t, 0.5);
   if (P_SNARE[i]) snare(t, i >= 14 ? 0.09 : 0.14);
   if (P_HAT[i])   hat(t, 0.05);
+  if (P_CLAP[i])  clap(t, 0.10);
 }
 
 function scheduler(){
@@ -661,7 +692,7 @@ const music = {
     seqTimer = setInterval(scheduler, 25);
   },
   set(i){ intensity = i; },
-  tempo(){ bpm = 108 + Math.min(26, (level-1)*4); },
+  tempo(){ bpm = 120 + Math.min(21, (level-1)*3); },
   gain(){
     if (!musicBus) return;
     const g = (muted || !musicOn) ? 0 : (ducked ? MUSIC_VOL*0.3 : MUSIC_VOL);
@@ -1303,7 +1334,7 @@ function showMenu(){
       '<div class="rules">' +
         '<span class="rule"><i class="chip d"></i> تمر <b>+٥</b></span>' +
         '<span class="rule"><i class="chip b"></i> بيرق <b>+١٢</b></span>' +
-        '<span class="rule"><i class="chip s"></i> درع لعشر ثوانٍ</span>' +
+        '<span class="rule"><i class="chip s"></i> درع لخمس عشرة ثانية</span>' +
         '<span class="rule"><i class="chip x"></i> اصطدام = حياة</span>' +
       '</div>' +
       '<button class="play" data-act="start">ابدأ الطيران</button>' +
